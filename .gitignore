@@ -1,0 +1,6 @@
+venv
+.env
+__pyache__
+*.db
+config.py
+.idea
