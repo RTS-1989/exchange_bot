@@ -8,10 +8,19 @@ from app import bot
 
 class TestDatabase(IsolatedAsyncioTestCase):
     async def test_crud(self):
-        await database.insert_currency('usd')
-        self.assertEqual(await database.select_currency('usd'), ('usd',))
-        await database.delete_currency('usd')
-        self.assertEqual(await database.select_currency('usd'), None)
+        await database.insert_users(1111, 'euro')
+        self.assertEqual(await database.select_users(1111), ('euro',))
+        await database.delete_users(1111)
+        self.assertEqual(await database.delete_users(1111), None)
+        await database.insert_currency_value('euro', 88, '2021-3-10')
+        self.assertEqual(await database.select_currency_value('euro', '2021-3-10'), ('euro', 88, '2021-3-10',))
+        await database.delete_all_currency_info('euro')
+        self.assertEqual(await database.select_currency_value('euro', '2021-3-10'), None)
+        await database.insert_currency_value('usd', 71, '2020-9-10')
+        await database.insert_currency_value('euro', 81, '2020-9-11')
+        self.assertEqual(await database.delete_currency_info_by_date('usd', '2020-9-10'), None)
+        self.assertEqual(await database.select_currency_value('euro', '2020-9-11'), ('euro', 81, '2020-9-11',))
+        self.assertEqual(await database.delete_currency_info_by_date('euro', '2020-9-11'), None)
 
 
 class TestCache(unittest.TestCase):
