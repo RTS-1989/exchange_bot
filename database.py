@@ -27,16 +27,17 @@ class Cache(redis.StrictRedis):
                             decode_responses=decode_responses)
         logging.info('Redis start')
 
-    def jset(self, name, value, ex=2):
-        '''функция конвертирует python-объект в Json и сохранит'''
-        r = self.get(name)
-        if r is None:
-            return r
-        return ujson.load(r)
+    def jset(self, name, value, ex=0):
+        """функция конвертирует python-объект в Json и сохранит"""
+        return self.setex(name, ex, ujson.dumps(value))
 
     def jget(self, name):
         """функция возвращает Json и конвертирует в python-объект"""
-        return ujson.loads(self.get(name))
+        r = self.get(name)
+        if r is None:
+            return r
+        return ujson.loads(r)
+
 
 
 class Database:

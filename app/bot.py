@@ -49,18 +49,35 @@ async def show_main_window(callback_query: types.CallbackQuery):
     await bot.send_message(callback_query.from_user.id, msg.main, reply_markup=s.MAIN_KB)
 
 
-@dp.message_handler(lambda message: message.text == msg.btn_online)
-@dp.message_handler(commands=['online'])
+@dp.message_handler(lambda message: message.text == msg.btn_ec_today)
+@dp.message_handler(commands=['ec_today'])
 async def get_results(message: types.Message):
     """Обработка команды ec_today и кнопки Онлайн.
     Запрос курса валют. Вывод результатов"""
-
+    user_currencies = await s.get_currency_ids(message.from_user.id)
+    cache.setex(f"last_msg_{message.from_user.id}", YEAR, message.message_id + 1)
+    if not user_currencies:
+        await set_or_update_config(user_id=message.from_user.id)
+    else:
+        answer = await s.generate_results_answer(user_currencies)
+        cache.setex(f"last_update_{message.from_user.id}", MINUTE, "Updated")
+        await message.answer(answer, reply_markup=s.currencies_kb(user_currencies))
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('update_results'))
-async def update_results():
+async def update_results(callback_query: types.CallbackQuery):
     """Обновление сообщения результатов"""
-    pass
+    if cache.get(f"last_update_{callback_query.from_user.id}") is None:
+        user_currencies = callback_query.data.split("#")[1:]
+        answer = await s.generate_results_answer(user_currencies)
+        cache.setex(f"last_update_{callback_query.from_user.id}", MINUTE, "Updated")
+        await bot.edit_message_text(
+            answer,
+            callback_query.from_user.id,
+            message_id=int(cache.get(f"last_msg_{callback_query.from_user.id}"))
+        )
+    # игнорируем обновление, если прошло меньше минуты
+    await callback_query.answer(msg.cb_updated)
 
 
 @dp.message_handler(lambda message: message.text == msg.btn_config)
@@ -79,21 +96,67 @@ async def get_config(message: types.Message):
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('edit_config'))
-async def set_or_update_config(user_id: str):
+async def set_or_update_config(callback_query: types.CallbackQuery = None,
+                               user_id=None, offset=""):
     """Получение или обновление выбранных лиг"""
-    pass
+    # если пришел callback, получим данные
+    if callback_query is not None:
+        user_id = callback_query.from_user.id
+        offset = callback_query.data.split("#")[-1]
+
+    currency_ids = await s.get_currency_ids(user_id)
+    currencies = await s.get_currency_names(currency_ids)
+
+    # если это первый вызов функции, отправим сообщение
+    # если нет, отредактируем сообщение и клавиатуру
+    if offset == "":
+        await bot.send_message(
+            user_id,
+            msg.set_currencies.format(currencies=currencies),
+            reply_markup=s.currencies_kb(currency_ids)
+        )
+    else:
+        msg_id = cache.get(f"last_msg_{user_id}")
+        await bot.edit_message_text(
+            msg.set_leagues.format(currencies=currencies),
+            user_id,
+            message_id=msg_id
+        )
+        await bot.edit_message_reply_markup(
+            user_id,
+            message_id=msg_id,
+            reply_markup=s.currencies_kb(currency_ids, int(offset))
+        )
 
 
 @dp.callback_query_handler(lambda c: c.data[:6] in ['del_le', 'add_le'])
 async def update_leagues_info(callback_query: types.CallbackQuery):
-    """Добавление/удаление лиги из кеша, обновление сообщения"""
-    pass
+    """Добавление/удаление валюты из кеша, обновление сообщения"""
+    offset = callback_query.data.split('#')[-2]
+    s.update_currencies(callback_query.from_user.id, callback_query.data)
+    await set_or_update_config(user_id=callback_query.from_user.id, offset=offset)
+    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda c: c.data == 'save_config')
 async def save_config(callback_query: types.CallbackQuery):
     """Сохранение пользователя в базу данных"""
-    pass
+    currencies_list = s.get_currency_names(callback_query.from_user.id)
+    if len(currencies_list) > 3:
+        await callback_query.answer(msg.cb_limit, show_alert=True)
+    elif currencies_list:
+        await db.insert_or_update(callback_query.from_user.id,
+                                  ','.join(currencies_list)
+                                  )
+        callback_query.answer()
+        await bot.send_message(
+            callback_query.from_user.id,
+            msg.db_saved,
+            reply_markup=s.MAIN_KB
+        )
+    else:
+        # Не сохраням, если список пустой
+        await callback_query.answer(msg.cb_not_saved)
 
 
 @dp.callback_query_handler(lambda c: c.data == 'delete_config')
@@ -111,7 +174,7 @@ async def delete_config(callback_query: types.CallbackQuery):
 @dp.message_handler()
 async def unknown_message(message: types.Message):
     """Ответ на любое неожидаемое сообщение"""
-    pass
+    await message.answer(msg.unknown_text, reply_markup=s.MAIN_KB)
 
 
 async def on_shutdown(dp):

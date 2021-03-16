@@ -1,7 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, \
     InlineKeyboardMarkup, InlineKeyboardButton
 from emoji import emojize
-from config import CURRENCIES
+from config import CURRENCIES, MINUTE
 from database import cache, database as db
 from app.dialogs import msg
 
@@ -22,12 +22,12 @@ async def get_currency_ids(user_id: int):
             [cache.lpush(f'u{user_id}', lg_id) for lg_id in currencies]
         else:
             return []
-    return  currencies
+    return currencies
 
 
 CONFIG_KB = InlineKeyboardMarkup().row(
     InlineKeyboardButton(msg.btn_back, callback_data='main_window'),
-    InlineKeyboardButton(msg.btn_edit, callback_data='edit_config#')
+    InlineKeyboardButton(msg.config_btn_edit, callback_data='edit_config#')
 ).add(InlineKeyboardButton(msg.config_btn_delete, callback_data='delete_config'))
 
 
@@ -61,7 +61,7 @@ def currencies_kb(active_currencies: list, offset: int = 0):
 
 
 async def get_currency_names(ids: list) -> str:
-    """Функция собирает сообщение с названиями лиг из id"""
+    """Функция собирает сообщение с названиями валют из id"""
     currencies_text = ''
     for i, curr_id in enumerate(ids, start=1):
         if i != 1:
@@ -79,3 +79,53 @@ def update_currencies(user_id: int, data: str):
         cache.lpush(f'u{user_id}', currency_id)
     else:
         cache.lrem(f'{user_id}', 0, currency_id)
+
+
+def results_kb(currencies: list):
+    params = [f"#{curr}" for curr in currencies]
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton(
+        msg.update_results,
+        callback_data=f"update_results{''.join(params)}"
+    ))
+    return kb
+
+
+async def generate_results_answer(ids: list) -> str:
+    """Функция создaет сообщение для вывода валютных курсов"""
+    results = await get_last_results(ids)
+    if results:
+        text_results = results_to_text(results)
+        return msg.results.format(last_currencies=text_results)
+    else:
+        return msg.no_results
+
+
+def ids_to_key(ids: list) -> str:
+    """Стандартизация ключей для хранения курсов"""
+    ids.sort()
+    return ",".join(ids)
+
+
+async def parse_currencies(ids: list) -> list:
+    """Функция получения данных по валютам по API"""
+    # логику напишем в следующей части
+    return []
+
+
+async def get_last_results(currencies_ids: list) -> list:
+    curr_key = ids_to_key(currencies_ids)
+    last_results = cache.jget(curr_key)
+    if last_results is None:
+        last_results = await parse_currencies(currencies_ids)
+        if last_results:
+            # добавляем новые данные по валютам, если они есть
+            cache.jset(curr_key, last_results, MINUTE)
+    return last_results
+
+
+def results_to_text(matches: list) -> str:
+    """
+    Функция генерации сообщения с данными по валютам
+    """
+    # логику напишем в следующей части

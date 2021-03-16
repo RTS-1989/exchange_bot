@@ -3,7 +3,7 @@ import aiohttp
 from unittest import IsolatedAsyncioTestCase
 
 from database import cache, database
-from app import bot
+from app import bot, service
 
 
 class TestDatabase(IsolatedAsyncioTestCase):
@@ -40,6 +40,16 @@ class TestBot(IsolatedAsyncioTestCase):
         await bot.bot._session.close()
 
         self.assertEqual(bot_info["username"], "rts1989_currency_bot")
+
+
+class TestService(IsolatedAsyncioTestCase):
+    async def test_get_currency_ids(self):
+        ids = await service.get_currency_ids("1111")
+        self.assertEqual(type(ids), list)
+
+    async def test_get_last_results(self):
+        results = await service.get_last_results(["1", "2", "3"])
+        self.assertEqual(type(results), list)
 
 
 if __name__ == '__main__':
