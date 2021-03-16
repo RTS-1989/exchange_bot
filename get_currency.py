@@ -30,15 +30,21 @@ result = {
 }
 
 exchange_ratio = {
-    'to_usd': 'for 1 usd',
-    'to_euro': 'for 1 euro'
+    'usd': 'за 1 доллра',
+    'euro': 'за 1 евро',
+    'yen': 'за 100 йен',
+    'czk': 'за 10 чешских крон',
+    'pound_sterling': 'за 1 фунт стерлинга',
+    'yuan': 'за 1 юань',
+    'zloty': 'за 1 злотый',
+    'hryvnia': 'за 10 гривен'
 }
 
 currency_structure = {
     'usd': "./*[@ID='R01235']/Value",
     'euro': "./*[@ID='R01239']/Value",
     'yen': "./*[@ID='R01820']/Value",
-    'czech': "./*[@ID='R01760']/Value",
+    'czk': "./*[@ID='R01760']/Value",
     'pound_sterling': "./*[@ID='R01035']/Value",
     'yuan': "./*[@ID='R01375']/Value",
     'zloty': "./*[@ID='R01565']/Value",
@@ -109,26 +115,26 @@ def get_info(CBRF_API_URL, currency_date):
 # euro = structure.find("./*[@ID='R01239']/Value")
 
 
-def get_usd_currency():
-    result['usd'] = dollar.text.replace(',', '.')
-    return result['usd']
+# def get_usd_currency():
+#     result['usd'] = dollar.text.replace(',', '.')
+#     return result['usd']
+#
+#
+# def get_euro_currency():
+#     result['euro'] = euro.text.replace(',', '.')
+#     return result['euro']
 
 
-def get_euro_currency():
-    result['euro'] = euro.text.replace(',', '.')
-    return result['euro']
-
-
-def get_currency_today(currency_name: str):
+def get_currency_today(currency_name: str) -> tuple:
     structure = ET.fromstring(get_info(CBRF_API_URL, get_today()))
     find_currency = structure.find(currency_structure[currency_name])
     if find_currency is None:
         structure = ET.fromstring(get_info(CBRF_API_URL, get_yesterday()))
         find_currency = structure.find(currency_structure[currency_name])
         result[currency_name] = find_currency.text.replace(',', '.')
-        return result[currency_name]
+        return result[currency_name], exchange_ratio[currency_name]
     result[currency_name] = find_currency.text.replace(',', '.')
-    return result[currency_name]
+    return result[currency_name], exchange_ratio[currency_name]
 
 
 if __name__ == '__main__':
@@ -136,5 +142,5 @@ if __name__ == '__main__':
     # print(get_usd_currency()),
     # print(get_euro_currency()),
     # print(date.today() - timedelta(days=1)),
-    print(get_currency_today('hryvnia'))
+    print(get_currency_today('czk'))
     # print(get_yesterday())
