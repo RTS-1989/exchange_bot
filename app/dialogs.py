@@ -5,7 +5,7 @@ from emoji import emojize
 @dataclass(frozen=True)
 class Messages:
     test: str = 'Привет, {name}! Работаю.'
-    btn_ec_today: str = 'Данные по курсу {currency} на сегодня'
+    btn_ec_today: str = 'Данные по курсам валют на сегодня'
     btn_config: str = f"{emojize(':memo:')} Настройки"
     start_new_user: str = "Привет. Я могу сообщать тебе данные по курсам валют."
     start_current_user: str = "Привет. С возвращением! " \
@@ -30,11 +30,12 @@ class Messages:
     db_saved: str = "Настройки сохранены"
     cb_not_saved: str = "Валюты не выбраны"
     cb_limit: str = "Превышен лимит. Максимум 3 Валюты."
-    results: str = "Все результаты за 48 часов\n{last_currencies}"
+    results: str = "Все результаты за сегодня\n{last_currencies}"
     no_results: str = "Нет данных по курсам валют"
     update_results: str = "Обновить результаты"
     cb_updated: str = f"{emojize(':white_heavy_check_mark:')} Готово"
     unknown_text: str = "Ничего не понятно, но очень интересно.\nПопробуй команду /help"
+    fetch_error: str = 'Ошибка получения данных, попробуйте позже.'
 
 
 msg = Messages()

@@ -39,7 +39,6 @@ class Cache(redis.StrictRedis):
         return ujson.loads(r)
 
 
-
 class Database:
     def __init__(self, name):
         self.name = name
@@ -61,7 +60,8 @@ class Database:
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS users
         (id INT PRIMARY KEY,
-        currency_name VARCHAR(30) NOT NULL);
+        currency_name VARCHAR(30) NOT NULL,
+        currency_value DECIMAL(10, 4) NULL);
         ''')
         connection.commit()
         cursor.close()
@@ -89,38 +89,22 @@ class Database:
         self._execute_query(insert_query)
         logging.info(f'{user_id} with {currency_name} was added to users table')
 
-    async def insert_currency_value(self, currency_name: str, currency_value: int, currency_date):
-        insert_query = f'''INSERT INTO currency_info(currency_name, currency_value,
-                            date) VALUES("{currency_name}", {currency_value},
-                            "{currency_date}")'''
-        self._execute_query(insert_query)
-        logging.info(f'{currency_name} on {currency_date} was added to db with '
-                     f'value = {currency_value}')
-
-    async def update_users(self, user_id, currency_name):
-        update_query = f'''UPDATE users SET currency_name = "{currency_name}"
+    async def update_users(self, user_id, currency_name: str):
+        update_query = f'''UPDATE users SET currency_name = "{currency_name}",
                         WHERE user_id = {user_id}'''
         self._execute_query(update_query)
         logging.info(f'Currencies for user {user_id} was updated')
 
-    async def insert_or_update(self, user_id: int, currencies: str):
+    async def insert_or_update(self, user_id: int, currency_name: str):
         user_currencies = await self.select_users(user_id)
         if user_currencies is not None:
-            await self.update_users(user_id, currencies)
+            await self.update_users(user_id, currency_name)
         else:
-            await self.insert_users(user_id, currencies)
+            await self.insert_users(user_id, currency_name)
 
     async def select_users(self, user_id: int):
         select_query = f'''SELECT currency_name FROM users
                         WHERE id = {user_id}'''
-        record = self._execute_query(select_query, select=True)
-        return record
-
-    async def select_currency_value(self, currency_name: str, currency_date):
-        select_query = f'''SELECT currency_name,
-                        currency_value, date FROM currency_info
-                        WHERE currency_name = "{currency_name}" AND 
-                        date = "{currency_date}"'''
         record = self._execute_query(select_query, select=True)
         return record
 
@@ -130,19 +114,42 @@ class Database:
         self._execute_query(delete_query)
         logging.info(f'{user_id} was deleted from users')
 
-    async def delete_all_currency_info(self, currency_name):
-        delete_query = f'''DELETE FROM currency_info 
-                        WHERE currency_name = "{currency_name}"'''
-        self._execute_query(delete_query)
-        logging.info(f'Info about {currency_name} was deleted '
-                     f'from currency_info table')
+    async def insert_currency_value_for_users(self, currency_name: str, currency_value: float):
+        insert_query = f'''INSERT INTO users (currency_value)
+                        VALUES({currency_value}) WHERE currency_name = {currency_name}'''
+        self._execute_query(insert_query)
+        logging.info(f'Внесеные данные для {currency_name} со значнием {currency_value}')
 
-    async def delete_currency_info_by_date(self, currency_name, currency_date):
-        delete_by_date_query = f'''DELETE FROM currency_info
-                        WHERE currency_name = "{currency_name}" AND
-                        date = "{currency_date}"'''
-        self._execute_query(delete_by_date_query)
-        logging.info(f'Info about {currency_name} for {currency_date} was deleted')
+# Пока еще не работающий функционал
+    # async def insert_currency_value(self, currency_name: str, currency_value: int, currency_date):
+    #     insert_query = f'''INSERT INTO currency_info(currency_name, currency_value,
+    #                         date) VALUES("{currency_name}", {currency_value},
+    #                         "{currency_date}")'''
+    #     self._execute_query(insert_query)
+    #     logging.info(f'{currency_name} on {currency_date} was added to db with '
+    #                  f'value = {currency_value}')
+    #
+    # async def select_currency_value(self, currency_name: str, currency_date):
+    #     select_query = f'''SELECT currency_name,
+    #                     currency_value, date FROM currency_info
+    #                     WHERE currency_name = "{currency_name}" AND
+    #                     date = "{currency_date}"'''
+    #     record = self._execute_query(select_query, select=True)
+    #     return record
+    #
+    # async def delete_all_currency_info(self, currency_name):
+    #     delete_query = f'''DELETE FROM currency_info
+    #                     WHERE currency_name = "{currency_name}"'''
+    #     self._execute_query(delete_query)
+    #     logging.info(f'Info about {currency_name} was deleted '
+    #                  f'from currency_info table')
+    #
+    # async def delete_currency_info_by_date(self, currency_name, currency_date):
+    #     delete_by_date_query = f'''DELETE FROM currency_info
+    #                     WHERE currency_name = "{currency_name}" AND
+    #                     date = "{currency_date}"'''
+    #     self._execute_query(delete_by_date_query)
+    #     logging.info(f'Info about {currency_name} for {currency_date} was deleted')
 
 
 cache = Cache(

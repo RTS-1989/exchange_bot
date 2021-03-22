@@ -25,7 +25,7 @@ result = {
     'usd': 0,
     'euro': 0,
     'yen': 0,
-    'czech': 0,
+    'czk': 0,
     'pound_sterling': 0,
     'yuan': 0,
     'zloty': 0,
@@ -126,8 +126,8 @@ def get_date():
 
 
 def get_info(CBRF_API_URL, currency_date):
-    get_info = requests.get(CBRF_API_URL+currency_date)
-    return get_info.content
+    info = requests.get(CBRF_API_URL+currency_date)
+    return info.content
 
 
 def get_moscow_time():
@@ -162,12 +162,12 @@ def time_comparison(currency_name: str) -> bool:
 #     return result['euro']
 
 
-def get_currency_today(currency_name: str) -> tuple:
+def get_currency_today(currency_name: str) -> float:
     if time_comparison(currency_name):
         structure = ET.fromstring(get_info(CBRF_API_URL, get_today()))
         find_currency = structure.find(currency_structure[currency_name])
-        result[currency_name] = find_currency.text.replace(',', '.')
-        return result[currency_name], exchange_ratio[currency_name]
+        result[currency_name] = float(find_currency.text.replace(',', '.'))
+        return result[currency_name]
     else:
         if currency_name == 'usd' or currency_name == 'euro':
             logging.info(currency_messages[currency_name])
@@ -176,23 +176,35 @@ def get_currency_today(currency_name: str) -> tuple:
         return get_currency_yesterday(currency_name)
 
 
-def get_currency_yesterday(currency_name: str) -> tuple:
+def get_currency_yesterday(currency_name: str) -> float:
     structure = ET.fromstring(get_info(CBRF_API_URL, get_yesterday()))
     find_currency = structure.find(currency_structure[currency_name])
-    result[currency_name] = find_currency.text.replace(',', '.')
+    result[currency_name] = float(find_currency.text.replace(',', '.'))
     logging.info(f'Данные по {currency_name} за {get_yesterday()}')
-    return result[currency_name], exchange_ratio[currency_name]
+    return result[currency_name]
 
 
 def get_currency_actual(currency_name: str) -> tuple:
     structure = ET.fromstring(get_info(CBRF_API_URL, get_today()))
     find_currency = structure.find(currency_structure[currency_name])
     result[currency_name] = find_currency.text.replace(',', '.')
+    print(type(result[currency_name]))
     return result[currency_name], exchange_ratio[currency_name]
 
 
+def fetch_all_currencies() -> dict:
+    for curr in result.keys():
+        result[curr] = get_currency_today(curr)
+    return result
+
+
 if __name__ == '__main__':
-    print(get_currency_today('czk'))
-    print(get_currency_yesterday('euro'))
-    print(get_moscow_time())
+    start = datetime.datetime.now()
+    print(type(get_currency_today('czk')))
+    # print(get_currency_yesterday('euro'))
+    # print(get_moscow_time())
     print(get_currency_actual('usd'))
+    # print(fetch_all_currencies())
+    end = datetime.datetime.now()
+    result = end - start
+    print(result)

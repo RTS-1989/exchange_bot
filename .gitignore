@@ -4,3 +4,4 @@ __pyache__
 *.db
 config.py
 .idea
+some_check.py
